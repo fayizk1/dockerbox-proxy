@@ -14,6 +14,7 @@ type backendType struct {
 
 type addDataType struct {
 	HostName string
+	Rule string
 	Backend backendType
 }
 
@@ -26,13 +27,17 @@ func AddHostRule(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf(`{"message" : "%s" }`, err.Error()), 500)
 		return
 	}
-	host, okHost := reqData["host"]
+	host, okHost := reqData["hostname"]
 	backend, okBackend :=reqData["backend"]
+	rule, okRule := reqData["rule"]
 	if !okHost || !okBackend {
 		http.Error(w, `{"message" : "Unknown request" }`, 400)
 		return
 	}
-	err = addHostRule(host, backend)
+	if !okRule {
+		rule = ""
+	}
+	err = addHostRule(host, backend, rule)
 	if err != nil {
 		http.Error(w, fmt.Sprintf(`{"message" : "%s" }`, err.Error()), 500)
 		return
@@ -72,7 +77,7 @@ func AddNewProxy(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"message" : "Unknown request" }`, 400)
 		return
 	}
-	err = addHostRule(reqData.HostName, reqData.Backend.Name)
+	err = addHostRule(reqData.HostName, reqData.Backend.Name, reqData.Rule)
 	if err != nil {
 		http.Error(w, fmt.Sprintf(`{"message" : "%s" }`, err.Error()), 500)
 		return
@@ -92,7 +97,7 @@ func RemoveHostRule(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf(`{"message" : "%s" }`, err.Error()), 500)
 		return
 	}
-	host, ok := reqData["host"]
+	host, ok := reqData["hostname"]
 	if !ok {
 		http.Error(w, `{"message" : "Unknown request" }`, 400)
 		return

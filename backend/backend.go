@@ -6,13 +6,19 @@ import (
 	"sync"
 	"time"
 	"errors"
+	"strings"
 	"net/http"
 	"math/rand"
 )
 
+type HostRule struct {
+	Rule string
+	Backend string
+}
+
 type Backends struct {
 	sync.RWMutex
-	hostRules map[string]string
+	hostRules map[string]*HostRule
 	backends map[string][]string
 } 
 
@@ -25,30 +31,50 @@ func random(min, max int) int {
 	return rand.Intn(max - min) + min
 }
 
+func GetMostMatchString(list []string, keyword string) string {
+	var tempList []string
+	for i := range list {
+		if strings.HasPrefix(keyword, list[i]) {
+			tempList = append(tempList, list[i])
+		}
+	}
+	if len(tempList) <1 {
+		return ""
+	}
+	mostMatch := ""
+	currentSize  := 0
+	for i := range tempList {
+		if currentSize < len(tempList[i]) {
+			mostMatch = tempList[i]
+		}
+	}
+	return mostMatch
+}
+
 func Initialize() {
-	x = &Backends{hostRules : make(map[string]string), backends : make(map[string][]string)}
+	x = &Backends{hostRules : make(map[string]*HostRule), backends : make(map[string][]string)}
 	go listen()
 }
 
-func addHostRule(host, backend string) error {
+func addHostRule(host, backend, rule string) error {
 	x.Lock()
 	defer x.Unlock() 
 	if _, ok := x.hostRules[host]; ok {
 		log.Println(fmt.Sprintf("HostAdd Error: Host[%s] entry already exists, skipping", host))
 		return errors.New(fmt.Sprintf("HostAdd Error: Host[%s] entry already exists, skipping", host))
 	}
-	x.hostRules[host] = backend 
+	x.hostRules[host] = &HostRule{Rule : rule, Backend : backend} 
 	return nil
 }
 
-func updateHostRule(host, newBackend string) error {
+func updateHostRule(host, newBackend, rule string) error {
 	x.Lock()
 	defer x.Unlock() 
 	if _, ok := x.hostRules[host]; !ok {
 		log.Println(fmt.Sprintf("HostUpdate Error: Host[%s] entry does not exist, skipping", host))
 		return errors.New(fmt.Sprintf("HostUpdate Error: Host[%s] entry does not exist, skipping", host))
 	}
-	x.hostRules[host] = newBackend
+	x.hostRules[host] = &HostRule{Rule : rule, Backend : newBackend}
 	return nil
 }
 
@@ -58,13 +84,34 @@ func deleteHostRule(host string) {
 	delete(x.hostRules, host)
 }
 
+func cleanUpRule(host string) {
+	x.Lock()
+	defer x.Unlock()
+	_, ok := x.hostRules[host]
+	if !ok {
+		return
+	}
+	removeBackend(x.hostRules[host].Backend)
+	deleteHostRule(host)
+}
+
 func getHostBackend(host string) string {
 	x.RLock()
 	defer x.RUnlock()
-	if _,ok := x.hostRules[host]; !ok {
+	keys := make([]string, 0, len(x.hostRules))
+	for k := range x.hostRules {
+		keys = append(keys, k)
+	}
+	mostMatch := GetMostMatchString(keys, host)
+	if mostMatch == "" {
 		return ""
 	}
-	return x.hostRules[host]
+	if x.hostRules[mostMatch].Rule == "pathbeg" {
+		return x.hostRules[mostMatch].Backend
+	} else if mostMatch == host {
+		return x.hostRules[mostMatch].Backend
+	}
+	return ""
 }
 
 func addBackendSystem(backend, hostUri string) {
