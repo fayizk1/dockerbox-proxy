@@ -73,9 +73,12 @@ func AddNewProxy(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf(`{"message" : "%s" }`, err.Error()), 500)
 		return
 	}
-	if reqData.HostName == "" || reqData.Backend.Name == "" || len(reqData.Backend.Uris) < 1 {
+	if reqData.HostName == "" ||  len(reqData.Backend.Uris) < 1 {
 		http.Error(w, `{"message" : "Unknown request" }`, 400)
 		return
+	}
+	if reqData.Backend.Name == "" {
+		reqData.Backend.Name = RandStringBytes(10)
 	}
 	err = addHostRule(reqData.HostName, reqData.Backend.Name, reqData.Rule)
 	if err != nil {
