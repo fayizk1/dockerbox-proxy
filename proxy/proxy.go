@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"github.com/mailgun/oxy/forward"
 	"github.com/mailgun/oxy/testutils"
-	"github.com/fayizk1/dockerbox-proxy/backend"
+	"github.com/dockerx/dockerbox-proxy/backend"
 )
 
 

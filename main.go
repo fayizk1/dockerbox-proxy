@@ -5,8 +5,8 @@ import (
 	"log"
 	"syscall"
 	"os/signal"
-	"github.com/fayizk1/dockerbox-proxy/backend"
-	"github.com/fayizk1/dockerbox-proxy/proxy"
+	"github.com/dockerx/dockerbox-proxy/backend"
+	"github.com/dockerx/dockerbox-proxy/proxy"
 )
 
 func main() {
